@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>숫자 인식기</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 30px;
+    }
+    canvas {
+      border: 1px solid white;
+      background-color: black;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #prediction {
+      font-size: 20px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>숫자를 그리세요. (0-9)</h2>
+  <canvas id="canvas" width="280" height="280"></canvas>
+  <br>
+  <button onclick="submitDrawing('dl')">딥러닝 모델 예측</button>
+  <button onclick="submitDrawing('svm')">SVM 모델 예측</button>
+  <button onclick="clearCanvas()">초기화</button>
+  <p id="prediction"></p>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+
+    function initCanvas() {
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    initCanvas();
+
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousemove", draw);
+
+    function draw(e) {
+      if (!drawing) return;
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(e.offsetX, e.offsetY, 13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function clearCanvas() {
+      initCanvas();
+      document.getElementById("prediction").innerText = "";
+    }
+
+    function submitDrawing(modelType) {
+      document.getElementById("prediction").innerText = "예측 중...";
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append("file", blob, "digit.png");
+        fetch(`/predict_${modelType}`, {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("prediction").innerText =
+            `예측 결과 (${modelType.toUpperCase()}): ${data.prediction}`;
+        })
+        .catch(err => {
+          document.getElementById("prediction").innerText = "예측 실패";
+          console.error(err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
